@@ -240,11 +240,11 @@ mylang/
 - [x] Implement prototype chain lookup
 - [x] Basic tests for object cloning
 
-### Phase 2: Basic Types
-- [ ] Number prototype with arithmetic
-- [ ] Boolean prototype with conditionals
-- [ ] String prototype with operations
-- [ ] Autoboxing for literals
+### Phase 2: Basic Types ✅ COMPLETE
+- [x] Number prototype with arithmetic
+- [x] Boolean prototype with conditionals
+- [x] String prototype with operations
+- [x] Autoboxing for literals
 
 ### Phase 3: Parser
 - [ ] Lexer with tokenization
