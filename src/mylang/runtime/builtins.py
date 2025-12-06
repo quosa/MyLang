@@ -9,7 +9,6 @@ This module provides the built-in prototypes for MyLang:
 All built-in types follow the prototype-based object model.
 """
 
-
 from mylang.runtime.objects import MyLangObject
 
 # ============================================================================
