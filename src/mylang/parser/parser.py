@@ -112,8 +112,26 @@ class Parser:
         if not token or token.type == "EOF":
             return None
 
-        # Check if it's an assignment (identifier followed by =)
-        if token.type == "IDENTIFIER" and self.peek_token() and self.peek_token().type == "EQUALS":
+        # Check if it's an assignment or slot assignment
+        # Look ahead to find =
+        saved_pos = self.pos
+        is_assignment = False
+
+        # Try to parse as assignment
+        if token.type == "IDENTIFIER":
+            self.advance()  # Skip first identifier
+            # Check if next is = (simple assignment) or identifier then = (slot assignment)
+            if self.current_token() and self.current_token().type == "EQUALS":
+                is_assignment = True
+            elif self.current_token() and self.current_token().type == "IDENTIFIER":
+                self.advance()  # Skip second identifier
+                if self.current_token() and self.current_token().type == "EQUALS":
+                    is_assignment = True
+
+        # Restore position
+        self.pos = saved_pos
+
+        if is_assignment:
             return self.parse_assignment()
 
         # Otherwise, parse as an expression (could be message send or literal)
@@ -122,17 +140,32 @@ class Parser:
     def parse_assignment(self) -> Assignment:
         """Parse an assignment statement.
 
-        Returns:
-            An Assignment AST node
-        """
-        # Get identifier name
-        name_token = self.expect("IDENTIFIER")
-        # Skip =
-        self.expect("EQUALS")
-        # Parse value expression
-        value = self.parse_expression()
+        Handles both simple assignments (x = value) and slot assignments (obj slot = value).
 
-        return Assignment(name_token.value, value)
+        Returns:
+            An Assignment AST node or MessageSend with assignment
+        """
+        # Get first identifier
+        first = self.expect("IDENTIFIER")
+
+        # Check if there's another identifier before =
+        if self.current_token() and self.current_token().type == "IDENTIFIER":
+            # Slot assignment: obj slot = value
+            slot_name = self.expect("IDENTIFIER")
+            self.expect("EQUALS")
+            value = self.parse_expression()
+
+            # Create a message send that represents the slot assignment
+            # This will be interpreted as: obj.set_slot(slot_name, value)
+            # Return a special assignment that the interpreter can handle
+            # For now, create an Assignment with a compound name
+            # We'll handle this in the interpreter
+            return Assignment(first.value + " " + slot_name.value, value)
+        else:
+            # Simple assignment: x = value
+            self.expect("EQUALS")
+            value = self.parse_expression()
+            return Assignment(first.value, value)
 
     def parse_expression(self):
         """Parse an expression.
@@ -147,9 +180,21 @@ class Parser:
 
         # Check if this is a message send
         if self.current_token() and self.current_token().type == "IDENTIFIER":
-            # Simple message send: receiver message
+            # Simple message send: receiver message [args...]
             message_token = self.advance()
-            return MessageSend(primary, message_token.value)
+
+            # Try to consume one argument (for binary messages like +, -, etc.)
+            args = []
+            if self.current_token() and self.current_token().type in [
+                "IDENTIFIER",
+                "NUMBER",
+                "STRING",
+                "TRUE",
+                "FALSE",
+            ]:
+                args.append(self.parse_primary())
+
+            return MessageSend(primary, message_token.value, args)
 
         return primary
 
