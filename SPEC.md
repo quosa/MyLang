@@ -1,6 +1,23 @@
-# 📘 MyLang — Language Specification v0.3
+# 📘 MyLang — Language Specification v0.4
 
 A small, prototype-based, indentation-sensitive object language inspired by Io and Smalltalk.
+
+---
+
+## Version History
+
+**v0.4 (Current)** - Flexible Control Flow
+- Conditionals (`ifTrue`, `ifFalse`) no longer require `return` in blocks
+- Standalone `ifTrue` and `ifFalse` supported for guard clauses
+- Non-local return semantics clarified: `return` exits enclosing method
+- Added comparison with Smalltalk and Io approaches
+- Updated EBNF to include block arguments
+- Enhanced examples showcasing flexible patterns
+
+**v0.3** - Foundation
+- Initial specification with object system, parser, and interpreter
+- Basic control flow with mandatory returns
+- Message-oriented programming model
 
 ---
 
@@ -173,26 +190,167 @@ Number fib =
 
 ## 7. Control Flow
 
-### 7.1 Conditionals
+Control flow in MyLang is **object-oriented**: conditionals and loops are messages sent to Boolean objects, with indented blocks as implicit arguments. This design is inspired by Smalltalk and Io.
 
+### 7.1 Design Philosophy: Control Flow as Messages
+
+**Smalltalk approach:**
+```smalltalk
+"Conditionals are messages to booleans with block arguments"
+x > 0 ifTrue: [ self doSomething ].
+x > 0 ifTrue: [ ^42 ] ifFalse: [ ^0 ].
+```
+
+**Io approach:**
+```io
+// Conditionals are also messages, but different syntax
+if(x > 0, doSomething)
+if(x > 0) then(doSomething) else(doOther)
+```
+
+**MyLang approach:**
 ```mylang
-condition ifTrue
-    indented statements
-    return expr
+# Uses indentation instead of delimiters, keeps it message-oriented
+x > 0 ifTrue
+    self doSomething
+
+x > 0 ifTrue
+    return 42
 ifFalse
-    indented statements
-    return expr
+    return 0
 ```
 
-Note: Both `ifTrue` and `ifFalse` blocks must end with explicit `return`.
+### 7.2 Conditionals
 
-### 7.2 Loops
+Conditionals are implemented as messages (`ifTrue`, `ifFalse`) sent to Boolean objects. The indented block following the message is treated as an implicit block argument.
+
+#### Standalone `ifTrue` - Guard clauses and defaults
 
 ```mylang
-condition whileTrue
-    indented statements
-    # no explicit return needed in loop body
+# Set default if nil
+arg == nil ifTrue
+    arg = "default"
+# execution continues here
+
+# Early exit validation
+input < 0 ifTrue
+    return "Error: negative input"
+# continues here if input >= 0
 ```
+
+#### Standalone `ifFalse` - Inverse guards
+
+```mylang
+# Only execute if condition is false
+hasPermission ifFalse
+    return "Access denied"
+# continues here if hasPermission is true
+```
+
+#### Combined `ifTrue`/`ifFalse` - Full conditionals
+
+```mylang
+# Both branches for side effects
+score >= 60 ifTrue
+    grade = "Pass"
+ifFalse
+    grade = "Fail"
+# continues here with grade set
+
+# Both branches with returns - one must execute
+x < 0 ifTrue
+    return "negative"
+ifFalse
+    return "non-negative"
+# never reached - both branches return
+```
+
+#### Return Semantics
+
+- **`return` in a block**: Does **non-local return** — exits the enclosing method (Smalltalk-style)
+- **No `return` in block**: Block executes statements, then execution continues after the block
+
+```mylang
+Number absolute =
+    # Non-local return - exits the absolute method
+    self value < 0 ifTrue
+        return 0 - self value
+    # If no return executed, continues here
+    return self value
+
+Number ensurePositive =
+    # Side effect only - execution continues
+    self value < 0 ifTrue
+        self value = 0
+    # Always reaches here
+    return self
+```
+
+### 7.3 Loops
+
+Loops use `whileTrue` message sent to a Boolean object. Loop bodies do not need `return` statements.
+
+```mylang
+# Basic loop
+i value <= 100 whileTrue
+    i print
+    i value = i value + 1
+```
+
+**Loop semantics:**
+- The condition is re-evaluated before each iteration
+- Loop body executes for side effects
+- No implicit return from loop body
+- Can use explicit `return` to exit the enclosing method early
+
+```mylang
+Number findFirst =
+    i = 1
+    i <= self value whileTrue
+        i % 7 == 0 ifTrue
+            return i  # exits findFirst method, not just the loop
+        i = i + 1
+    return 0  # not found
+```
+
+### 7.4 Block Evaluation Model
+
+**How blocks work:**
+
+1. The indented block following `ifTrue`, `ifFalse`, or `whileTrue` is an implicit block argument
+2. The Boolean object's method decides whether to evaluate the block
+3. When evaluated, statements execute in sequence
+4. If `return` is encountered, it performs **non-local return** (exits the enclosing method)
+5. If no `return`, execution continues after the block
+
+**Comparison to other languages:**
+
+| Language | Block syntax | Return behavior |
+|----------|--------------|-----------------|
+| Smalltalk | `[ statements ]` | `^` does non-local return |
+| Ruby | `{ statements }` or `do...end` | `return` exits enclosing method |
+| Io | `(statements)` | Last expression is value |
+| **MyLang** | Indentation | `return` exits enclosing method |
+
+### 7.5 Implementation Note
+
+`ifTrue`, `ifFalse`, and `whileTrue` are methods on Boolean objects that accept block arguments:
+
+```mylang
+# Conceptually, Boolean has these methods:
+Boolean ifTrue =
+    # self is the Boolean instance
+    # If self.value is true, evaluate the block argument
+    # Implementation handled by interpreter
+
+Boolean ifFalse =
+    # If self.value is false, evaluate the block argument
+
+Boolean whileTrue =
+    # While self.value is true, evaluate the block argument repeatedly
+```
+
+The interpreter handles block evaluation and non-local returns.
 
 ---
 
@@ -303,22 +461,24 @@ Object print =
 
 ---
 
-## 10. Full EBNF v0.3
+## 10. Full EBNF v0.4
 
 ```ebnf
 program       = statement* ;
 
-statement     = assignment | methoddef | message | empty ;
+statement     = returnstmt | assignment | methoddef | message | empty ;
+
+returnstmt    = "return" expr ;
 
 assignment    = expr "=" expr ;
 
 methoddef     = expr IDENT ("=" "return" expr | "=" NEWLINE INDENT block DEDENT) ;
 
-block         = statement* "return" expr ;
+block         = statement* ;
 
-expr          = message | literal | IDENT ;
+message       = primary (IDENT (primary* | blockarg))* ;
 
-message       = primary (IDENT primary*)* ;
+blockarg      = NEWLINE INDENT block DEDENT ;
 
 primary       = literal | IDENT | "(" expr ")" ;
 
@@ -328,6 +488,12 @@ IDENT         = /[A-Za-z_][A-Za-z0-9_]*/ ;
 NUMBER        = /[0-9]+(\.[0-9]+)?/ ;
 STRING        = /"[^"]*"/ ;
 ```
+
+**Key changes from v0.3:**
+- `block` no longer requires `return` statement at end (optional)
+- `returnstmt` is now a standalone statement type
+- `message` can accept `blockarg` (indented block) after message name
+- `blockarg` represents indented blocks passed to messages like `ifTrue`, `ifFalse`, `whileTrue`
 
 ---
 
@@ -344,13 +510,14 @@ Object print =
     return self
 
 Number fib =
+    # Early return for base case - guard clause pattern
     self value < 2 ifTrue
         return self
-    ifFalse
-        a = self value - 1
-        b = self value - 2
-        # arithmetic returns raw numbers, autoboxed when sending messages
-        return a fib + b fib
+    # Otherwise compute recursively
+    a = self value - 1
+    b = self value - 2
+    # arithmetic returns raw numbers, autoboxed when sending messages
+    return a fib + b fib
 
 result = 10
 # expands to:
@@ -360,7 +527,7 @@ result fib
 result print
 ```
 
-Note: `fib` uses `self.value` explicitly. Arithmetic operations return raw numbers which are automatically boxed into Number objects when needed.
+**Note:** This example showcases guard clause pattern - `ifTrue` with early return, then continue with main logic. No `ifFalse` needed!
 
 ---
 
@@ -368,20 +535,19 @@ Note: `fib` uses `self.value` explicitly. Arithmetic operations return raw numbe
 
 ```mylang
 Number fizzbuzz =
+    # Multiple guard clauses - check each condition and return early
     self value % 15 == 0 ifTrue
         "FizzBuzz" print
         return self
-    ifFalse
     self value % 3 == 0 ifTrue
         "Fizz" print
         return self
-    ifFalse
     self value % 5 == 0 ifTrue
         "Buzz" print
         return self
-    ifFalse
-        self print
-        return self
+    # Default case - no guard matched
+    self print
+    return self
 
 i = Number clone
 i value = 1
@@ -391,7 +557,53 @@ i value <= 100 whileTrue
     i value = i value + 1
 ```
 
-Note: We explicitly reassign `i value` after calling `fizzbuzz`. In the future, we could add `_ = i fizzbuzz` to explicitly discard return values.
+**Note:** This showcases multiple guard clauses with early returns. Each `ifTrue` stands alone - much cleaner than nested `ifFalse` chains!
+
+---
+
+### 11.3 Conditional Patterns Showcase
+
+```mylang
+# Pattern 1: Guard clause with early return
+Number validatePositive =
+    self value < 0 ifTrue
+        return "Error: negative number"
+    return "OK"
+
+# Pattern 2: Set default without early return
+Number ensureMinimum =
+    self value < 1 ifTrue
+        self value = 1
+    # continues here regardless
+    return self
+
+# Pattern 3: Traditional if/else
+Number signString =
+    self value < 0 ifTrue
+        return "negative"
+    ifFalse
+        return "non-negative"
+
+# Pattern 4: Side effects in both branches
+Number clamp =
+    self value < 0 ifTrue
+        self value = 0
+    ifFalse
+        self value > 100 ifTrue
+            self value = 100
+    return self
+
+# Pattern 5: Early exit from loop
+Number findDivisor =
+    i = 2
+    i < self value whileTrue
+        self value % i == 0 ifTrue
+            return i  # exits findDivisor, not just loop
+        i = i + 1
+    return self  # prime or 1
+```
+
+**Note:** These patterns demonstrate the flexibility of optional returns and standalone conditionals.
 
 ---
 
