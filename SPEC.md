@@ -320,17 +320,40 @@ Number findFirst =
 1. The indented block following `ifTrue`, `ifFalse`, or `whileTrue` is an implicit block argument
 2. The Boolean object's method decides whether to evaluate the block
 3. When evaluated, statements execute in sequence
-4. If `return` is encountered, it performs **non-local return** (exits the enclosing method)
-5. If no `return`, execution continues after the block
+4. **Block value**: The last expression in the block becomes the block's value (implicit return to caller)
+5. **Non-local return**: If `return` is encountered, it performs **non-local return** (exits the enclosing method, not just the block)
+
+**Block value semantics:**
+
+```mylang
+# Block evaluates to last expression
+result = x > 0 ifTrue
+    y = 42
+    y + 1  # last expression
+ifFalse
+    0
+# result = 43 if x > 0, else 0
+
+# Can ignore the value
+score >= 60 ifTrue
+    grade = "Pass"
+# ifTrue returns the value of the assignment, but we ignore it
+
+# return does non-local exit
+Number absolute =
+    self value < 0 ifTrue
+        return 0 - self value  # exits absolute method entirely
+    return self value  # only reached if condition was false
+```
 
 **Comparison to other languages:**
 
-| Language | Block syntax | Return behavior |
-|----------|--------------|-----------------|
-| Smalltalk | `[ statements ]` | `^` does non-local return |
-| Ruby | `{ statements }` or `do...end` | `return` exits enclosing method |
-| Io | `(statements)` | Last expression is value |
-| **MyLang** | Indentation | `return` exits enclosing method |
+| Language | Block syntax | Block value | Non-local return |
+|----------|--------------|-------------|------------------|
+| Smalltalk | `[ statements ]` | Last expression | `^` |
+| Ruby | `{ statements }` or `do...end` | Last expression | `return` |
+| Io | `(statements)` | Last expression | `return` |
+| **MyLang** | Indentation | Last expression | `return` |
 
 ### 7.5 Implementation Note
 
