@@ -1,6 +1,5 @@
 """Tests for control flow (ifTrue, ifFalse, whileTrue, return)."""
 
-
 from mylang.interpreter.interpreter import Interpreter
 
 
