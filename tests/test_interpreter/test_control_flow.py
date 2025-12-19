@@ -231,3 +231,153 @@ result findDivisor
         # 15's first divisor after 1 is 3... wait, we start at 2, so it should be 3
         # 15 % 2 = 1 (not 0), 15 % 3 = 0, so return 3
         assert result.get_slot("value") == 3
+
+
+class TestBreak:
+    """Tests for break statement."""
+
+    def test_break_exits_loop(self):
+        """Test that break exits the loop immediately."""
+        source = """
+i = 0
+i < 100 whileTrue
+    i = i + 1
+    i > 5 ifTrue
+        break
+"""
+        interp = Interpreter()
+        interp.eval(source)
+        result = interp.env.get("i")
+        # Loop should stop when i reaches 6
+        assert result.get_slot("value") == 6
+
+    def test_break_with_search_pattern(self):
+        """Test break in a search pattern - find first even number > 10."""
+        source = """
+i = 0
+found = 0
+i < 100 whileTrue
+    i = i + 1
+    i > 10 ifTrue
+        i % 2 == 0 ifTrue
+            found = i
+            break
+"""
+        interp = Interpreter()
+        interp.eval(source)
+        result = interp.env.get("found")
+        # First even number > 10 is 12
+        assert result.get_slot("value") == 12
+
+    def test_break_in_nested_loop_only_exits_inner(self):
+        """Test that break only exits the innermost loop."""
+        source = """
+outer_count = 0
+inner_count = 0
+i = 0
+i < 3 whileTrue
+    outer_count = outer_count + 1
+    j = 0
+    j < 10 whileTrue
+        j = j + 1
+        inner_count = inner_count + 1
+        j == 3 ifTrue
+            break
+    i = i + 1
+"""
+        interp = Interpreter()
+        interp.eval(source)
+        outer = interp.env.get("outer_count")
+        inner = interp.env.get("inner_count")
+        # Outer loop runs 3 times
+        assert outer.get_slot("value") == 3
+        # Inner loop runs 3 times per outer iteration (breaks at j==3)
+        # So 3 * 3 = 9 total inner iterations
+        assert inner.get_slot("value") == 9
+
+
+class TestContinue:
+    """Tests for continue statement."""
+
+    def test_continue_skips_to_next_iteration(self):
+        """Test that continue skips to the next iteration."""
+        source = """
+i = 0
+sum = 0
+i < 10 whileTrue
+    i = i + 1
+    i % 2 == 0 ifTrue
+        continue
+    sum = sum + i
+"""
+        interp = Interpreter()
+        interp.eval(source)
+        result = interp.env.get("sum")
+        # Sum of odd numbers 1, 3, 5, 7, 9 = 25
+        assert result.get_slot("value") == 25
+
+    def test_continue_with_filter_pattern(self):
+        """Test continue for filtering - skip multiples of 3."""
+        source = """
+i = 0
+count = 0
+i < 10 whileTrue
+    i = i + 1
+    i % 3 == 0 ifTrue
+        continue
+    count = count + 1
+"""
+        interp = Interpreter()
+        interp.eval(source)
+        result = interp.env.get("count")
+        # Numbers 1-10, excluding 3, 6, 9 = 7 numbers
+        assert result.get_slot("value") == 7
+
+    def test_continue_in_nested_loop_only_affects_inner(self):
+        """Test that continue only affects the innermost loop."""
+        source = """
+outer_count = 0
+inner_count = 0
+i = 0
+i < 3 whileTrue
+    i = i + 1
+    outer_count = outer_count + 1
+    j = 0
+    j < 5 whileTrue
+        j = j + 1
+        j == 2 ifTrue
+            continue
+        inner_count = inner_count + 1
+"""
+        interp = Interpreter()
+        interp.eval(source)
+        outer = interp.env.get("outer_count")
+        inner = interp.env.get("inner_count")
+        # Outer loop runs 3 times
+        assert outer.get_slot("value") == 3
+        # Inner loop runs 5 times per outer, but skips when j==2
+        # So 4 increments per outer * 3 outers = 12
+        assert inner.get_slot("value") == 12
+
+
+class TestBreakAndContinueTogether:
+    """Tests for break and continue used together."""
+
+    def test_break_and_continue_in_same_loop(self):
+        """Test using both break and continue in the same loop."""
+        source = """
+i = 0
+sum = 0
+i < 20 whileTrue
+    i = i + 1
+    i > 15 ifTrue
+        break
+    i % 2 == 0 ifTrue
+        continue
+    sum = sum + i
+"""
+        interp = Interpreter()
+        interp.eval(source)
+        result = interp.env.get("sum")
+        # Sum odd numbers from 1 to 15: 1+3+5+7+9+11+13+15 = 64
+        assert result.get_slot("value") == 64
