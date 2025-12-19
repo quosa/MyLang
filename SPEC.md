@@ -1,4 +1,4 @@
-# 📘 MyLang — Language Specification v0.3
+# 📘 MyLang — Language Specification v0.4
 
 A small, prototype-based, indentation-sensitive object language inspired by Io and Smalltalk.
 
@@ -48,7 +48,7 @@ identifier = letter (letter | digit | "_")*
 ### 2.3 Reserved Words
 
 ```
-true false ifTrue ifFalse whileTrue return clone
+true false ifTrue ifFalse whileTrue return break continue clone
 ```
 
 ---
@@ -194,6 +194,49 @@ condition whileTrue
     # no explicit return needed in loop body
 ```
 
+**Loop Control Statements:**
+
+MyLang provides `break` and `continue` for early loop exit and iteration control:
+
+**Break** — exits the innermost loop immediately:
+
+```mylang
+i value < 100 whileTrue
+    i value > 10 ifTrue
+        break    # Exit loop when i > 10
+    i value = i value + 1
+```
+
+**Continue** — skips to the next iteration:
+
+```mylang
+i value < 10 whileTrue
+    i value = i value + 1
+    i value % 2 == 0 ifTrue
+        continue    # Skip even numbers
+    i print         # Only prints odd numbers
+```
+
+**Nesting Behavior:**
+
+`break` and `continue` only affect the innermost enclosing loop:
+
+```mylang
+outer value < 5 whileTrue
+    inner value < 5 whileTrue
+        inner value == 3 ifTrue
+            break        # Only exits inner loop
+        inner value = inner value + 1
+    outer value = outer value + 1
+```
+
+**Semantics:**
+
+- `break` exits the loop; execution continues after the loop body
+- `continue` skips remaining statements in the current iteration and re-evaluates the condition
+- Runtime error if used outside a loop
+- Consistent with `return` keyword precedent for control flow
+
 ---
 
 ## 8. Built-In Types
@@ -303,18 +346,20 @@ Object print =
 
 ---
 
-## 10. Full EBNF v0.3
+## 10. Full EBNF v0.4
 
 ```ebnf
 program       = statement* ;
 
-statement     = assignment | methoddef | message | empty ;
+statement     = assignment | methoddef | message | controlflow | empty ;
 
 assignment    = expr "=" expr ;
 
 methoddef     = expr IDENT ("=" "return" expr | "=" NEWLINE INDENT block DEDENT) ;
 
-block         = statement* "return" expr ;
+controlflow   = "break" | "continue" | "return" expr ;
+
+block         = statement* ("return" expr)? ;
 
 expr          = message | literal | IDENT ;
 
@@ -395,6 +440,45 @@ Note: We explicitly reassign `i value` after calling `fizzbuzz`. In the future, 
 
 ---
 
+### 11.3 Prime Number Finder (using break)
+
+```mylang
+# Find the first prime number greater than 100
+Number isPrime =
+    self value < 2 ifTrue
+        return false
+    i = 2
+    i value * i value <= self value whileTrue
+        self value % i value == 0 ifTrue
+            return false
+        i value = i value + 1
+    return true
+
+candidate = 101
+candidate value < 1000 whileTrue
+    candidate isPrime value ifTrue
+        "First prime > 100:" print
+        candidate print
+        break    # Exit once found
+    candidate value = candidate value + 1
+```
+
+---
+
+### 11.4 Odd Numbers (using continue)
+
+```mylang
+# Print odd numbers from 1 to 20
+i = 0
+i value < 20 whileTrue
+    i value = i value + 1
+    i value % 2 == 0 ifTrue
+        continue    # Skip even numbers
+    i print
+```
+
+---
+
 ## 12. Notes
 
 - **Explicit self** enforced in all methods
@@ -418,4 +502,21 @@ Note: We explicitly reassign `i value` after calling `fizzbuzz`. In the future, 
 
 ---
 
-**End of Specification v0.3**
+## 14. Version History
+
+### v0.4 (2025-12-19)
+- Added `break` and `continue` loop control statements
+- Updated EBNF grammar to include control flow statements
+- Added prime number finder and odd number filter examples
+- Expanded loop control documentation with nesting behavior
+
+### v0.3 (Previous)
+- Prototype-based object system
+- Message-oriented syntax
+- Indentation-sensitive blocks
+- Control flow (ifTrue/ifFalse, whileTrue)
+- Built-in types (Number, Boolean, String)
+
+---
+
+**End of Specification v0.4**
