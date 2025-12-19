@@ -3,7 +3,7 @@
 **Status**: Draft
 **Author**: Claude
 **Date**: 2025-12-19
-**Target Version**: v0.4
+**Target Version**: v0.5
 
 ---
 
@@ -534,7 +534,7 @@ Adding `break` and `continue` as keywords:
 - ✅ Enables real-world loop patterns
 - ✅ Leaves door open for message-based extensions
 
-**Recommendation**: Approve and implement for v0.4.
+**Recommendation**: Approve and implement for v0.5.
 
 ---
 

@@ -1,4 +1,4 @@
-# 📘 MyLang — Language Specification v0.4
+# 📘 MyLang — Language Specification v0.5
 
 A small, prototype-based, indentation-sensitive object language inspired by Io and Smalltalk.
 
@@ -346,7 +346,7 @@ Object print =
 
 ---
 
-## 10. Full EBNF v0.4
+## 10. Full EBNF v0.5
 
 ```ebnf
 program       = statement* ;
@@ -504,19 +504,21 @@ i value < 20 whileTrue
 
 ## 14. Version History
 
-### v0.4 (2025-12-19)
+### v0.5 (2025-12-19)
 - Added `break` and `continue` loop control statements
 - Updated EBNF grammar to include control flow statements
 - Added prime number finder and odd number filter examples
 - Expanded loop control documentation with nesting behavior
 
+### v0.4 (Previous)
+- Control flow implementation (ifTrue/ifFalse, whileTrue)
+
 ### v0.3 (Previous)
 - Prototype-based object system
 - Message-oriented syntax
 - Indentation-sensitive blocks
-- Control flow (ifTrue/ifFalse, whileTrue)
 - Built-in types (Number, Boolean, String)
 
 ---
 
-**End of Specification v0.4**
+**End of Specification v0.5**
