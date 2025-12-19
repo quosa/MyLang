@@ -40,7 +40,7 @@ class Lexer:
     - Comments
     """
 
-    KEYWORDS = {"true": "TRUE", "false": "FALSE", "return": "RETURN"}
+    KEYWORDS = {"true": "TRUE", "false": "FALSE", "return": "RETURN", "break": "BREAK", "continue": "CONTINUE"}
 
     def __init__(self, source: str) -> None:
         """Initialize the lexer with source code.

@@ -1,4 +1,4 @@
-# 📘 MyLang — Language Specification v0.4
+# 📘 MyLang — Language Specification v0.5
 
 A small, prototype-based, indentation-sensitive object language inspired by Io and Smalltalk.
 
@@ -6,7 +6,15 @@ A small, prototype-based, indentation-sensitive object language inspired by Io a
 
 ## Version History
 
-**v0.4 (Current)** - Flexible Control Flow
+**v0.5 (Current)** - Loop Control Statements
+- Added `break` statement to exit loops early
+- Added `continue` statement to skip to next iteration
+- Loop control statements work with innermost enclosing loop
+- Keywords chosen for consistency with `return` precedent
+- Updated EBNF grammar to include break and continue
+- Enhanced loop examples with search and filter patterns
+
+**v0.4** - Flexible Control Flow
 - Conditionals (`ifTrue`, `ifFalse`) no longer require `return` in blocks
 - Standalone `ifTrue` and `ifFalse` supported for guard clauses
 - Non-local return semantics clarified: `return` exits enclosing method
@@ -65,7 +73,7 @@ identifier = letter (letter | digit | "_")*
 ### 2.3 Reserved Words
 
 ```
-true false ifTrue ifFalse whileTrue return clone
+true false ifTrue ifFalse whileTrue return break continue clone
 ```
 
 ---
@@ -303,15 +311,77 @@ i value <= 100 whileTrue
 - No implicit return from loop body
 - Can use explicit `return` to exit the enclosing method early
 
-```mylang
-Number findFirst =
-    i = 1
-    i <= self value whileTrue
-        i % 7 == 0 ifTrue
-            return i  # exits findFirst method, not just the loop
-        i = i + 1
-    return 0  # not found
+#### Break Statement
+
+The `break` statement immediately exits the innermost enclosing loop:
+
+```ebnf
+break_stmt = "break" NEWLINE
 ```
+
+**Semantics:**
+- Immediately exits the innermost `whileTrue` loop
+- Execution continues at the first statement after the loop
+- Runtime error if used outside a loop
+
+**Example:**
+
+```mylang
+# Find first even number > 10
+i = 0
+i value < 100 whileTrue
+    i value > 10 ifTrue
+        i value % 2 == 0 ifTrue
+            "Found:" print
+            i print
+            break
+    i value = i value + 1
+```
+
+#### Continue Statement
+
+The `continue` statement skips to the next iteration of the innermost enclosing loop:
+
+```ebnf
+continue_stmt = "continue" NEWLINE
+```
+
+**Semantics:**
+- Immediately skips to the next iteration of the innermost loop
+- Re-evaluates the loop condition
+- Runtime error if used outside a loop
+
+**Example:**
+
+```mylang
+# Print odd numbers from 1 to 10
+i = 0
+i value < 10 whileTrue
+    i value = i value + 1
+    i value % 2 == 0 ifTrue
+        continue
+    i print
+```
+
+#### Nesting Behavior
+
+`break` and `continue` only affect the **innermost** loop:
+
+```mylang
+# Nested loop example
+i = 0
+i value < 5 whileTrue
+    j = 0
+    j value < 5 whileTrue
+        j value == 3 ifTrue
+            break       # Only exits inner loop
+        j value = j value + 1
+    i value = i value + 1
+```
+
+#### Design Note: Keywords vs. Messages
+
+MyLang uses `break` and `continue` as **keywords** (not messages) for consistency with the `return` keyword. While MyLang follows a "message-oriented" philosophy, control flow keywords are a pragmatic choice that aligns with Smalltalk's approach of using special syntax for fundamental control flow constructs.
 
 ### 7.4 Block Evaluation Model
 
@@ -484,14 +554,18 @@ Object print =
 
 ---
 
-## 10. Full EBNF v0.4
+## 10. Full EBNF v0.5
 
 ```ebnf
 program       = statement* ;
 
-statement     = returnstmt | assignment | methoddef | message | empty ;
+statement     = returnstmt | breakstmt | continuestmt | assignment | methoddef | message | empty ;
 
 returnstmt    = "return" expr ;
+
+breakstmt     = "break" ;
+
+continuestmt  = "continue" ;
 
 assignment    = expr "=" expr ;
 
@@ -512,7 +586,12 @@ NUMBER        = /[0-9]+(\.[0-9]+)?/ ;
 STRING        = /"[^"]*"/ ;
 ```
 
-**Key changes from v0.3:**
+**Key changes from v0.4:**
+- Added `breakstmt` for exiting loops early
+- Added `continuestmt` for skipping to next iteration
+- Both are standalone statements that can appear wherever statements are allowed
+
+**Changes from v0.3:**
 - `block` no longer requires `return` statement at end (optional)
 - `returnstmt` is now a standalone statement type
 - `message` can accept `blockarg` (indented block) after message name
@@ -630,6 +709,83 @@ Number findDivisor =
 
 ---
 
+### 11.4 Loop Control with Break and Continue
+
+```mylang
+# Pattern 1: Search with break - Find first prime number > 100
+Number isPrime =
+    self value < 2 ifTrue
+        return false
+    i = 2
+    i value * i value <= self value whileTrue
+        self value % i value == 0 ifTrue
+            return false
+        i value = i value + 1
+    return true
+
+Number findFirstPrimeAbove =
+    candidate = self value + 1
+    candidate value < 1000 whileTrue
+        candidate isPrime value ifTrue
+            "First prime above" print
+            self print
+            "is" print
+            candidate print
+            break  # Exit loop when found
+        candidate value = candidate value + 1
+
+# Pattern 2: Filter with continue - Print only odd numbers
+Number printOddsUpTo =
+    i = 1
+    i value <= self value whileTrue
+        i value % 2 == 0 ifTrue
+            i value = i value + 1
+            continue  # Skip even numbers
+        i print
+        i value = i value + 1
+
+# Pattern 3: Nested loops with break - Find pair where i * j > 100
+Number findProductPair =
+    i = 1
+    found = false
+    i value <= self value whileTrue
+        found value ifTrue
+            break  # Exit outer loop
+        j = 1
+        j value <= self value whileTrue
+            product = i value * j value
+            product > 100 ifTrue
+                "Pair:" print
+                i print
+                j print
+                "Product:" print
+                product print
+                found value = true
+                break  # Exit inner loop
+            j value = j value + 1
+        i value = i value + 1
+
+# Pattern 4: Input validation with continue
+Number sumPositives =
+    sum = 0
+    i = 0
+    i value < self value whileTrue
+        i value < 0 ifTrue
+            i value = i value + 1
+            continue  # Skip negative values
+        sum value = sum value + i value
+        i value = i value + 1
+    return sum
+```
+
+**Note:** `break` and `continue` provide precise loop control:
+- **break**: Exit loop immediately (search patterns, early termination)
+- **continue**: Skip to next iteration (filtering, validation)
+- **return**: Exit entire method (different from break!)
+- Break and continue only affect the innermost enclosing loop
+
+---
+
 ## 12. Notes
 
 - **Explicit self** enforced in all methods
@@ -653,4 +809,4 @@ Number findDivisor =
 
 ---
 
-**End of Specification v0.3**
+**End of Specification v0.5**

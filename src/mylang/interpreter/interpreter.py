@@ -22,6 +22,18 @@ class NonLocalReturnError(Exception):
         super().__init__()
 
 
+class BreakException(Exception):
+    """Exception raised to break out of a loop."""
+
+    pass
+
+
+class ContinueException(Exception):
+    """Exception raised to skip to the next iteration of a loop."""
+
+    pass
+
+
 class Interpreter:
     """Interpreter for executing MyLang programs.
 
@@ -78,6 +90,12 @@ class Interpreter:
 
         if node.type == "return":
             return self.eval_return(node)
+
+        if node.type == "break":
+            return self.eval_break(node)
+
+        if node.type == "continue":
+            return self.eval_continue(node)
 
         raise NotImplementedError(f"Node type {node.type} not implemented")
 
@@ -222,6 +240,32 @@ class Interpreter:
         value = self.eval_node(node.value)
         raise NonLocalReturnError(value)
 
+    def eval_break(self, node):
+        """Evaluate a break statement.
+
+        Raises BreakException to exit the innermost loop.
+
+        Args:
+            node: The break node
+
+        Raises:
+            BreakException: Always raised to implement break
+        """
+        raise BreakException()
+
+    def eval_continue(self, node):
+        """Evaluate a continue statement.
+
+        Raises ContinueException to skip to the next iteration.
+
+        Args:
+            node: The continue node
+
+        Raises:
+            ContinueException: Always raised to implement continue
+        """
+        raise ContinueException()
+
     def eval_control_flow(self, receiver, message, args, receiver_node=None):
         """Handle control flow messages (ifTrue, ifFalse, whileTrue).
 
@@ -285,16 +329,24 @@ class Interpreter:
             # The receiver_node contains the condition expression
             result = None
             while True:
-                # Re-evaluate the receiver expression to get fresh condition
-                current_receiver = self.eval_node(receiver_node) if receiver_node else receiver
                 try:
-                    current_condition = current_receiver.get_slot("value")
-                except AttributeError as e:
-                    raise TypeError("whileTrue condition must evaluate to a Boolean") from e
+                    # Re-evaluate the receiver expression to get fresh condition
+                    current_receiver = self.eval_node(receiver_node) if receiver_node else receiver
+                    try:
+                        current_condition = current_receiver.get_slot("value")
+                    except AttributeError as e:
+                        raise TypeError("whileTrue condition must evaluate to a Boolean") from e
 
-                if not current_condition:
+                    if not current_condition:
+                        break
+
+                    result = self.eval_block(block)
+
+                except BreakException:
+                    # Break out of the loop
                     break
-
-                result = self.eval_block(block)
+                except ContinueException:
+                    # Skip to the next iteration
+                    continue
 
             return result

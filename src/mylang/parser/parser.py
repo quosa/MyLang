@@ -6,6 +6,8 @@ Converts a stream of tokens into an Abstract Syntax Tree (AST).
 from mylang.parser.ast_nodes import (
     Assignment,
     Block,
+    Break,
+    Continue,
     Identifier,
     Literal,
     MessageSend,
@@ -124,6 +126,16 @@ class Parser:
         if token.type == "IDENTIFIER" and token.value == "return":
             return self.parse_return()
 
+        # Check for break statement
+        if token.type == "BREAK":
+            self.advance()
+            return Break()
+
+        # Check for continue statement
+        if token.type == "CONTINUE":
+            self.advance()
+            return Continue()
+
         # Check if it's an assignment or slot assignment
         # Look ahead to find =
         saved_pos = self.pos
@@ -203,8 +215,15 @@ class Parser:
                 self.advance()  # Skip NEWLINE
                 block = self.parse_block()
                 result = MessageSend(result, message_token.value, [block])
-                # After a block, check if there's a chained message (like ifFalse)
-                continue
+                # After a block, only continue chaining for valid control flow messages
+                # (like ifFalse after ifTrue). Otherwise, stop the chain.
+                if self.current_token() and self.current_token().type == "IDENTIFIER":
+                    next_msg = self.current_token().value
+                    # Only continue if it's a valid control flow chain message
+                    if next_msg in ["ifTrue", "ifFalse"]:
+                        continue
+                # Stop the message chain
+                break
 
             # Try to consume one argument (for binary messages like +, -, etc.)
             args = []

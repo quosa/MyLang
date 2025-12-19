@@ -141,3 +141,29 @@ class Return(ASTNode):
     def __init__(self, value: ASTNode) -> None:
         super().__init__("return")
         self.value = value
+
+
+@dataclass
+class Break(ASTNode):
+    """Break statement.
+
+    Represents: break
+
+    Exits the innermost enclosing loop.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("break")
+
+
+@dataclass
+class Continue(ASTNode):
+    """Continue statement.
+
+    Represents: continue
+
+    Skips to the next iteration of the innermost enclosing loop.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("continue")
