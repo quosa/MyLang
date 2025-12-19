@@ -3,7 +3,15 @@
 Converts a stream of tokens into an Abstract Syntax Tree (AST).
 """
 
-from mylang.parser.ast_nodes import Assignment, Identifier, Literal, MessageSend, Program
+from mylang.parser.ast_nodes import (
+    Assignment,
+    Block,
+    Identifier,
+    Literal,
+    MessageSend,
+    Program,
+    Return,
+)
 from mylang.parser.lexer import Lexer, Token
 
 
@@ -112,6 +120,10 @@ class Parser:
         if not token or token.type == "EOF":
             return None
 
+        # Check for return statement
+        if token.type == "IDENTIFIER" and token.value == "return":
+            return self.parse_return()
+
         # Check if it's an assignment or slot assignment
         # Look ahead to find =
         saved_pos = self.pos
@@ -168,20 +180,31 @@ class Parser:
             return Assignment(first.value, value)
 
     def parse_expression(self):
-        """Parse an expression.
+        """Parse an expression with message chaining.
 
         Returns:
             An AST node representing the expression
         """
-        # For now, handle simple cases
-        # This would be extended to handle message chains, etc.
+        # Start with a primary expression
+        result = self.parse_primary()
 
-        primary = self.parse_primary()
-
-        # Check if this is a message send
-        if self.current_token() and self.current_token().type == "IDENTIFIER":
-            # Simple message send: receiver message [args...]
+        # Handle message chains: receiver msg1 arg1 msg2 arg2 ...
+        while self.current_token() and self.current_token().type == "IDENTIFIER":
             message_token = self.advance()
+
+            # Check if there's a block argument (NEWLINE INDENT)
+            if (
+                self.current_token()
+                and self.current_token().type == "NEWLINE"
+                and self.peek_token()
+                and self.peek_token().type == "INDENT"
+            ):
+                # Message with block argument: receiver message\n    block
+                self.advance()  # Skip NEWLINE
+                block = self.parse_block()
+                result = MessageSend(result, message_token.value, [block])
+                # After a block, check if there's a chained message (like ifFalse)
+                continue
 
             # Try to consume one argument (for binary messages like +, -, etc.)
             args = []
@@ -194,9 +217,9 @@ class Parser:
             ]:
                 args.append(self.parse_primary())
 
-            return MessageSend(primary, message_token.value, args)
+            result = MessageSend(result, message_token.value, args)
 
-        return primary
+        return result
 
     def parse_primary(self):
         """Parse a primary expression (literal or identifier).
@@ -234,3 +257,40 @@ class Parser:
             return Identifier(token.value)
 
         raise SyntaxError(f"Unexpected token: {token.type}")
+
+    def parse_return(self) -> Return:
+        """Parse a return statement.
+
+        Returns:
+            A Return AST node
+        """
+        self.expect("IDENTIFIER")  # Consume 'return'
+        value = self.parse_expression()
+        return Return(value)
+
+    def parse_block(self) -> Block:
+        """Parse a block of statements.
+
+        Expects: INDENT statements DEDENT
+
+        Returns:
+            A Block AST node
+        """
+        self.expect("INDENT")
+
+        statements = []
+
+        while self.current_token() and self.current_token().type not in ["DEDENT", "EOF"]:
+            self.skip_newlines()
+
+            if self.current_token() and self.current_token().type not in ["DEDENT", "EOF"]:
+                stmt = self.parse_statement()
+                if stmt:
+                    statements.append(stmt)
+
+            self.skip_newlines()
+
+        if self.current_token() and self.current_token().type == "DEDENT":
+            self.advance()
+
+        return Block(statements)

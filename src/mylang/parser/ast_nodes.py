@@ -107,3 +107,37 @@ class Identifier(ASTNode):
     def __init__(self, name: str) -> None:
         super().__init__("identifier")
         self.name = name
+
+
+@dataclass
+class Block(ASTNode):
+    """Block of statements.
+
+    Represents: indented block of code
+
+    Attributes:
+        statements: List of statements in the block
+    """
+
+    statements: list[ASTNode]
+
+    def __init__(self, statements: list[ASTNode]) -> None:
+        super().__init__("block")
+        self.statements = statements
+
+
+@dataclass
+class Return(ASTNode):
+    """Return statement.
+
+    Represents: return expr
+
+    Attributes:
+        value: Expression to return
+    """
+
+    value: ASTNode
+
+    def __init__(self, value: ASTNode) -> None:
+        super().__init__("return")
+        self.value = value

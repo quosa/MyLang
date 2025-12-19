@@ -4,14 +4,14 @@ A small, prototype-based, indentation-sensitive object language inspired by Io a
 
 ## Overview
 
-MyLang v0.3 is a minimalist language featuring:
+MyLang v0.4 is a minimalist language featuring:
 - **Prototype-based** object model (no classes)
 - **Message-oriented** programming
 - **Indentation-sensitive** syntax
 - **Explicit self** in methods
 - Built-in types: Number, Boolean, String
 
-See [SPEC.md](SPEC.md) for the complete language specification.
+See [SPEC.md](SPEC.md) for the complete language specification (v0.4).
 
 ## Development Setup
 
